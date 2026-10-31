@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PackAnalytics - Cruzamento de Dados & Stats para Apostas</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d1117;
+            color: #c9d1d9;
+        }
+        .bg-card {
+            background-color: #161b22;
+        }
+        .border-custom {
+            border-color: #30363d;
+        }
+        .accent-green {
+            color: #2ea043;
+        }
+        .bg-accent-green {
+            background-color: #238636;
+        }
+        .glow-box {
+            box-shadow: 0 0 15px rgba(46, 160, 67, 0.15);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0d1117; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #21262d; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #30363d; 
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-card border-b border-custom sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-green-600 p-2 rounded-lg text-white font-bold text-xl flex items-center justify-center w-10 h-10 shadow-lg">
+                    <i class="fa-solid fa-chart-network"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-white tracking-wide flex items-center gap-2">
+                        PACK<span class="text-green-500">ANALYTICS</span>
+                        <span class="text-xs bg-green-900/60 text-green-400 px-2 py-0.5 rounded border border-green-700/50">PRO v2.4</span>
+                    </h1>
+                    <p class="text-xs text-gray-400">Cruzamento de Dados & Inteligência Estatística</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-green-900/30 text-green-400 border border-green-800/50">
+                    <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                    Arena IA Conectada
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Sidebar: Selectors & Matches -->
+        <aside class="lg:col-span-3 flex flex-col gap-5">
+            <!-- League Selector -->
+            <div class="bg-card p-4 rounded-xl border border-custom">
+                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                    <i class="fa-solid fa-trophy text-yellow-500 mr-1"></i> Seleção de Liga
+                </label>
+                <select id="leagueSelect" class="w-full bg-gray-900 border border-custom text-white text-sm rounded-lg p-2.5 focus:ring-2 focus:ring-green-500 focus:outline-none transition-all">
+                    <option value="br_a">🇧🇷 Brasileirão Série A</option>
+                    <option value="br_b" selected>🇧🇷 Brasileirão Série B</option>
+                    <option value="epl">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</option>
+                    <option value="ucl">🇪🇺 UEFA Champions League</option>
+                    <option value="laliga">🇪🇸 La Liga</option>
+                </select>
+            </div>
+
+            <!-- Matches List -->
+            <div class="bg-card p-4 rounded-xl border border-custom flex-1">
+                <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center justify-between">
+                    <span><i class="fa-solid fa-calendar-days text-green-500 mr-1"></i> Jogos Selecionados</span>
+                    <span id="matchCount" class="text-xs text-gray-500">4 jogos</span>
+                </h3>
+                <div id="matchesContainer" class="flex flex-col gap-2.5">
+                    <!-- Dynamic Matches HTML injected via JS -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Dashboard: Data & Cross Analysis -->
+        <section class="lg:col-span-9 flex flex-col gap-6">
+
+            <!-- Filter Controls Bar -->
+            <div class="bg-card p-4 rounded-xl border border-custom flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-semibold text-gray-400 uppercase">Amostra:</span>
+                    <div class="inline-flex rounded-lg bg-gray-900 p-1 border border-custom" id="sampleFilterGroup">
+                        <button data-sample="5" class="sample-btn px-3 py-1 text-xs font-medium rounded-md text-gray-400 hover:text-white transition-all">Últimos 5</button>
+                        <button data-sample="10" class="sample-btn px-3 py-1 text-xs font-medium rounded-md text-gray-400 hover:text-white transition-all">Últimos 10</button>
+                        <button data-sample="season" class="sample-btn px-3 py-1 text-xs font-medium rounded-md text-white bg-green-600 shadow transition-all">Temporada</button>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <button id="btnGenerateScript" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 shadow-lg transition-all">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Gerar Script Arena IA
+                    </button>
+                </div>
+            </div>
+
+            <!-- Selected Match Banner Header -->
+            <div class="bg-card p-6 rounded-xl border border-custom relative overflow-hidden glow-box">
+                <div class="absolute top-0 right-0 p-4 opacity-10 text-9xl font-black text-gray-500 pointer-events-none select-none">
+                    VS
+                </div>
+                
+                <div class="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+                    <!-- Home Team -->
+                    <div class="flex items-center gap-4 w-full md:w-5/12 justify-start">
+                        <div id="homeLogo" class="w-16 h-16 rounded-full bg-gray-800 border-2 border-green-500 flex items-center justify-center font-bold text-2xl text-white shadow-md">
+                            SAN
+                        </div>
+                        <div>
+                            <span class="text-xs text-green-400 font-semibold uppercase">Mandante</span>
+                            <h2 id="homeName" class="text-2xl font-bold text-white tracking-tight">Santos</h2>
+                            <p id="homeRank" class="text-xs text-gray-400">1º Lugar • 62 pts</p>
+                        </div>
+                    </div>
+
+                    <!-- VS Badge -->
+                    <div class="flex flex-col items-center justify-center">
+                        <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">HOJE</span>
+                        <span class="text-2xl font-extrabold text-green-500">VS</span>
+                        <span id="matchTime" class="text-xs text-gray-400 mt-1 bg-gray-900 px-2 py-0.5 rounded border border-custom">21:30</span>
+                    </div>
+
+                    <!-- Away Team -->
+                    <div class="flex items-center gap-4 w-full md:w-5/12 justify-end text-right">
+                        <div>
+                            <span class="text-xs text-blue-400 font-semibold uppercase">Visitante</span>
+                            <h2 id="awayName" class="text-2xl font-bold text-white tracking-tight">Sport</h2>
+                            <p id="awayRank" class="text-xs text-gray-400">3º Lugar • 59 pts</p>
+                        </div>
+                        <div id="awayLogo" class="w-16 h-16 rounded-full bg-gray-800 border-2 border-blue-500 flex items-center justify-center font-bold text-2xl text-white shadow-md">
+                            SPT
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calculated Probabilities Cards Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                <div class="bg-card p-3.5 rounded-xl border border-custom text-center">
+                    <span class="text-xs text-gray-400 uppercase font-medium">Vitória Mandante</span>
+                    <div id="probHome" class="text-xl font-bold text-green-400 my-1">58%</div>
+                    <span id="oddHome" class="text-[11px] text-gray-500 bg-gray-900 px-2 py-0.5 rounded border border-custom inline-block">Odd Fair: 1.72</span>
+                </div>
+
+                <div class="bg-card p-3.5 rounded-xl border border-custom text-center">
+                    <span class="text-xs text-gray-400 uppercase font-medium">Empate</span>
+                    <div id="probDraw" class="text-xl font-bold text-yellow-400 my-1">26%</div>
+                    <span id="oddDraw" class="text-[11px] text-gray-500 bg-gray-900 px-2 py-0.5 rounded border border-custom inline-block">Odd Fair: 3.84</span>
+                </div>
+
+                <div class="bg-card p-3.5 rounded-xl border border-custom text-center">
+                    <span class="text-xs text-gray-400 uppercase font-medium">Vitória Visitante</span>
+                    <div id="probAway" class="text-xl font-bold text-blue-400 my-1">16%</div>
+                    <span id="oddAway" class="text-[11px] text-gray-500 bg-gray-900 px-2 py-0.5 rounded border border-custom inline-block">Odd Fair: 6.25</span>
+                </div>
+
+                <div class="bg-card p-3.5 rounded-xl border border-custom text-center">
+                    <span class="text-xs text-gray-400 uppercase font-medium">Ambas Marcam</span>
+                    <div id="probBtts" class="text-xl font-bold text-purple-400 my-1">54%</div>
+                    <span id="oddBtts" class="text-[11px] text-gray-500 bg-gray-900 px-2 py-0.5 rounded border border-custom inline-block">Odd Fair: 1.85</span>
+                </div>
+
+                <div class="bg-card p-3.5 rounded-xl border border-custom text-center col-span-2 sm:col-span-1">
+                    <span class="text-xs text-gray-400 uppercase font-medium">Over 2.5 Gols</span>
+                    <div id="probOver25" class="text-xl font-bold text-orange-400 my-1">48%</div>
+                    <span id="oddOver25" class="text-[11px] text-gray-500 bg-gray-900 px-2 py-0.5 rounded border border-custom inline-block">Odd Fair: 2.08</span>
+                </div>
+            </div>
+
+            <!-- Deep Cross Stats Metrics -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Comparative Metrics Progress Bars -->
+                <div class="bg-card p-5 rounded-xl border border-custom flex flex-col justify-between">
+                    <h3 class="text-sm font-bold text-white mb-4 flex items-center justify-between border-b border-custom pb-2">
+                        <span><i class="fa-solid fa-sliders text-green-500 mr-2"></i> Cruzamento Médio</span>
+                        <span class="text-xs font-normal text-gray-400" id="sampleLabelText">Base: Temporada</span>
+                    </h3>
+
+                    <div class="space-y-4">
+                        <!-- Metric 1: Expected Goals (xG) -->
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span id="homeXGVal" class="text-green-400 font-bold">1.82</span>
+                                <span class="text-gray-400 uppercase font-semibold">xG Esp. Gols</span>
+                                <span id="awayXGVal" class="text-blue-400 font-bold">1.15</span>
+                            </div>
+                            <div class="w-full bg-gray-900 rounded-full h-2 flex overflow-hidden border border-custom">
+                                <div id="homeXGBar" class="bg-green-500 h-2 transition-all duration-500" style="width: 61%"></div>
+                                <div id="awayXGBar" class="bg-blue-500 h-2 transition-all duration-500" style="width: 39%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Metric 2: Corners -->
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span id="homeCornersVal" class="text-green-400 font-bold">6.4</span>
+                                <span class="text-gray-400 uppercase font-semibold">Média Escanteios</span>
+                                <span id="awayCornersVal" class="text-blue-400 font-bold">4.2</span>
+                            </div>
+                            <div class="w-full bg-gray-900 rounded-full h-2 flex overflow-hidden border border-custom">
+                                <div id="homeCornersBar" class="bg-green-500 h-2 transition-all duration-500" style="width: 60%"></div>
+                                <div id="awayCornersBar" class="bg-blue-500 h-2 transition-all duration-500" style="width: 40%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Metric 3: Cards -->
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span id="homeCardsVal" class="text-green-400 font-bold">2.1</span>
+                                <span class="text-gray-400 uppercase font-semibold">Média Cartões</span>
+                                <span id="awayCardsVal" class="text-blue-400 font-bold">3.2</span>
+                            </div>
+                            <div class="w-full bg-gray-900 rounded-full h-2 flex overflow-hidden border border-custom">
+                                <div id="homeCardsBar" class="bg-green-500 h-2 transition-all duration-500" style="width: 40%"></div>
+                                <div id="awayCardsBar" class="bg-blue-500 h-2 transition-all duration-500" style="width: 60%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Metric 4: Ball Possession -->
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span id="homePossessionVal" class="text-green-400 font-bold">58%</span>
+                                <span class="text-gray-400 uppercase font-semibold">Posse de Bola</span>
+                                <span id="awayPossessionVal" class="text-blue-400 font-bold">42%</span>
+                            </div>
+                            <div class="w-full bg-gray-900 rounded-full h-2 flex overflow-hidden border border-custom">
+                                <div id="homePossessionBar" class="bg-green-500 h-2 transition-all duration-500" style="width: 58%"></div>
+                                <div id="awayPossessionBar" class="bg-blue-500 h-2 transition-all duration-500" style="width: 42%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Form & Head to Head (H2H) -->
+                <div class="bg-card p-5 rounded-xl border border-custom flex flex-col justify-between">
+                    <h3 class="text-sm font-bold text-white mb-4 flex items-center justify-between border-b border-custom pb-2">
+                        <span><i class="fa-solid fa-clock-rotate-left text-green-500 mr-2"></i> Retrospecto & Forma</span>
+                        <span class="text-xs text-gray-400">H2H Direto</span>
+                    </h3>
+
+                    <!-- Recent Form Badge Lines -->
+                    <div class="space-y-3 mb-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-gray-300 font-medium">Forma Mandante</span>
+                            <div id="homeFormBadges" class="flex gap-1">
+                                <!-- Dynamic badges -->
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-gray-300 font-medium">Forma Visitante</span>
+                            <div id="awayFormBadges" class="flex gap-1">
+                                <!-- Dynamic badges -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- H2H Summary Box -->
+                    <div class="bg-gray-900/80 p-3 rounded-lg border border-custom text-xs">
+                        <div class="text-gray-400 mb-2 font-semibold text-center uppercase tracking-wide">Últimos Confrontos Diretos</div>
+                        <div class="flex justify-around text-center">
+                            <div>
+                                <span class="text-gray-500 block">Vitórias Casa</span>
+                                <span id="h2hHomeWins" class="text-lg font-bold text-green-400">3</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-500 block">Empates</span>
+                                <span id="h2hDraws" class="text-lg font-bold text-yellow-400">1</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-500 block">Vitórias Fora</span>
+                                <span id="h2hAwayWins" class="text-lg font-bold text-blue-400">1</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Value Bet / AI Script Output Area -->
+            <div id="scriptSection" class="bg-card p-6 rounded-xl border border-custom glow-box">
+                <div class="flex items-center justify-between mb-3 border-b border-custom pb-3">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-robot text-green-500 text-lg"></i>
+                        <h3 class="text-base font-bold text-white">Análise e Sugestão - Arena IA</h3>
+                    </div>
+                    <button id="btnCopyScript" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded border border-custom flex items-center gap-1.5 transition-all">
+                        <i class="fa-regular fa-copy"></i> Copiar Análise
+                    </button>
+                </div>
+
+                <div id="scriptContent" class="bg-gray-900/90 p-4 rounded-lg border border-custom text-sm font-mono text-gray-300 leading-relaxed whitespace-pre-line">
+                    Clique em "Gerar Script Arena IA" para simular o cruzamento de dados completo do modelo estatístico...
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-card border-t border-custom mt-auto py-4 text-center text-xs text-gray-500">
+        PackAnalytics &copy; 2026 - Ferramenta de Análise Estatística Esportiva.
+    </footer>
+
+    <!-- Application Script -->
+    <script>
+        // --- DATA STORE ---
+        const database = {
+            br_b: [
+                {
+                    id: 'br_b_1',
+                    home: 'Santos',
+                    homeCode: 'SAN',
+                    homeRank: '1º Lugar • 62 pts',
+                    away: 'Sport',
+                    awayCode: 'SPT',
+                    awayRank: '3º Lugar • 59 pts',
+                    time: '21:30',
+                    stats: {
+                        season: {
+                            probHome: 58, probDraw: 26, probAway: 16, probBtts: 54, probOver25: 48,
+                            homeXG: 1.82, awayXG: 1.15,
+                            homeCorners: 6.4, awayCorners: 4.2,
+                            homeCards: 2.1, awayCards: 3.2,
+                            homePossession: 58, awayPossession: 42,
+                            homeForm: ['W', 'W', 'D', 'W', 'L'],
+                            awayForm: ['W', 'D', 'W', 'L', 'W'],
+                            h2h: { homeWins: 3, draws: 1, awayWins: 1 },
+                            suggestion: "O Santos apresenta forte dominância em casa na Série B com xG superior de 1.82. Recomenda-se entrada em Vitória do Santos ou Empate Anula (DNB) + Over 4.5 Cantos Santos."
+                        },
+                        10: {
+                            probHome: 52, probDraw: 28, probAway: 20, probBtts: 60, probOver25: 52,
+                            homeXG: 1.65, awayXG: 1.25,
+                            homeCorners: 5.9, awayCorners: 4.8,
+                            homeCards: 2.3, awayCards: 3.0,
+                            homePossession: 55, awayPossession: 45,
+                            homeForm: ['W', 'D', 'W', 'L', 'W'],
+                            awayForm: ['D', 'W', 'L', 'W', 'D'],
+                            h2h: { homeWins: 3, draws: 1, awayWins: 1 },
+                            suggestion: "Amostra dos últimos 10 jogos indica aumento na probabilidade de Ambas Marcam (60%). Sugestão: Ambas Marcam SIM ou Santos Ambas Marcam."
+                        },
+                        5: {
+                            probHome: 64, probDraw: 22, probAway: 14, probBtts: 42, probOver25: 40,
+                            homeXG: 2.05, awayXG: 0.85,
+                            homeCorners: 7.2, awayCorners: 3.5,
+                            homeCards: 1.8, awayCards: 3.6,
+                            homePossession: 62, awayPossession: 38,
+                            homeForm: ['W', 'W', 'W', 'D', 'W'],
+                            awayForm: ['L', 'D', 'W', 'L', 'D'],
+                            h2h: { homeWins: 3, draws: 1, awayWins: 1 },
+                            suggestion: "Excelente momento recente do Santos nos últimos 5 jogos (xG 2.05 vs 0.85). Valor claro em Vitória do Santos ML (Odd Fair 1.56)."
+                        }
+                    }
+                },
+                {
+                    id: 'br_b_2',
+                    home: 'Ceará',
+                    homeCode: 'CEA',
+                    homeRank: '4º Lugar • 57 pts',
+                    away: 'Novorizontino',
+                    awayCode: 'NOV',
+                    awayRank: '2º Lugar • 60 pts',
+                    time: '19:00',
+                    stats: {
+                        season: {
+                            probHome: 45, probDraw: 32, probAway: 23, probBtts: 48, probOver25: 41,
+                            homeXG: 1.45, awayXG: 1.20,
+                            homeCorners: 5.8, awayCorners: 4.9,
+                            homeCards: 2.8, awayCards: 2.5,
+                            homePossession: 52, awayPossession: 48,
+                            homeForm: ['W', 'L', 'W', 'W', 'D'],
+                            awayForm: ['D', 'W', 'W', 'L', 'W'],
+                            h2h: { homeWins: 2, draws: 2, awayWins: 1 },
+                            suggestion: "Confronto direto na parte de cima da tabela. Jogo equilibrado com forte apelo para Under 2.5 Gols e Ambas Não Marcam."
+                        },
+                        10: {
+                            probHome: 48, probDraw: 30, probAway: 22, probBtts: 50, probOver25: 45,
+                            homeXG: 1.50, awayXG: 1.18,
+                            homeCorners: 6.0, awayCorners: 4.5,
+                            homeCards: 2.9, awayCards: 2.7,
+                            homePossession: 53, awayPossession: 47,
+                            homeForm: ['W', 'W', 'L', 'W', 'D'],
+                            awayForm: ['W', 'D', 'L', 'W', 'W'],
+                            h2h: { homeWins: 2, draws: 2, awayWins: 1 },
+                            suggestion: "Últimos 10 jogos mantêm padrão sobriedade tática. Dupla Chance Ceará ou Empate é a linha mais protegida."
+                        },
+                        5: {
+                            probHome: 50, probDraw: 30, probAway: 20, probBtts: 38, probOver25: 35,
+                            homeXG: 1.62, awayXG: 0.95,
+                            homeCorners: 6.5, awayCorners: 3.8,
+                            homeCards: 3.2, awayCards: 3.0,
+                            homePossession: 56, awayPossession: 44,
+                            homeForm: ['W', 'W', 'W', 'D', 'L'],
+                            awayForm: ['D', 'L', 'W', 'L', 'D'],
+                            h2h: { homeWins: 2, draws: 2, awayWins: 1 },
+                            suggestion: "Ceará cresceu em volume de cantos nos últimos 5 jogos em casa. Linha de Over 9.5 Escanteios Totais ganha muito valor."
+                        }
+                    }
+                },
+                {
+                    id: 'br_b_3',
+                    home: 'Vila Nova',
+                    homeCode: 'VIL',
+                    homeRank: '6º Lugar • 52 pts',
+                    away: 'Goiás',
+                    awayCode: 'GOI',
+                    awayRank: '5º Lugar • 54 pts',
+                    time: '18:30',
+                    stats: {
+                        season: {
+                            probHome: 38, probDraw: 35, probAway: 27, probBtts: 52, probOver25: 44,
+                            homeXG: 1.25, awayXG: 1.18,
+                            homeCorners: 5.1, awayCorners: 4.7,
+                            homeCards: 3.9, awayCards: 3.7,
+                            homePossession: 50, awayPossession: 50,
+                            homeForm: ['D', 'W', 'L', 'D', 'W'],
+                            awayForm: ['W', 'D', 'D', 'W', 'L'],
+                            h2h: { homeWins: 2, draws: 4, awayWins: 2 },
+                            suggestion: "Clássico com alta média disciplinar (7.6 cartões/jogo no H2H). Entrada recomendada em Over 6.5 Cartões na partida."
+                        },
+                        10: {
+                            probHome: 35, probDraw: 38, probAway: 27, probBtts: 48, probOver25: 40,
+                            homeXG: 1.20, awayXG: 1.15,
+                            homeCorners: 4.9, awayCorners: 4.8,
+                            homeCards: 4.1, awayCards: 3.9,
+                            homePossession: 49, awayPossession: 51,
+                            homeForm: ['D', 'L', 'W', 'D', 'D'],
+                            awayForm: ['D', 'W', 'D', 'L', 'W'],
+                            h2h: { homeWins: 2, draws: 4, awayWins: 2 },
+                            suggestion: "Tendência de empate no clássico nos últimos 10 embates. Linha de Empate Anula para o time com odd mais alta."
+                        },
+                        5: {
+                            probHome: 40, probDraw: 35, probAway: 25, probBtts: 55, probOver25: 50,
+                            homeXG: 1.35, awayXG: 1.22,
+                            homeCorners: 5.4, awayCorners: 5.0,
+                            homeCards: 4.5, awayCards: 4.2,
+                            homePossession: 51, awayPossession: 49,
+                            homeForm: ['W', 'D', 'D', 'L', 'W'],
+                            awayForm: ['W', 'L', 'D', 'W', 'D'],
+                            h2h: { homeWins: 2, draws: 4, awayWins: 2 },
+                            suggestion: "Nos últimos 5 jogos os dois times apresentaram defesas mais expostas. Ambas Marcam com odds interessantes."
+                        }
+                    }
+                },
+                {
+                    id: 'br_b_4',
+                    home: 'Coritiba',
+                    homeCode: 'CFC',
+                    homeRank: '8º Lugar • 50 pts',
+                    away: 'América-MG',
+                    awayCode: 'AME',
+                    awayRank: '7º Lugar • 51 pts',
+                    time: '21:00',
+                    stats: {
+                        season: {
+                            probHome: 50, probDraw: 28, probAway: 22, probBtts: 51, probOver25: 46,
+                            homeXG: 1.55, awayXG: 1.10,
+                            homeCorners: 6.1, awayCorners: 4.3,
+                            homeCards: 2.4, awayCards: 2.8,
+                            homePossession: 54, awayPossession: 46,
+                            homeForm: ['W', 'L', 'W', 'D', 'W'],
+                            awayForm: ['L', 'D', 'W', 'L', 'D'],
+                            h2h: { homeWins: 3, draws: 1, awayWins: 1 },
+                            suggestion: "Coritiba muito forte no Couto Pereira. Valor na vitória simples do Coritiba."
+                        },
+                        10: {
+                            probHome: 48, probDraw: 30, probAway: 22, probBtts: 48, probOver25: 42,
+                            homeXG: 1.48, awayXG: 1.05,
+                            homeCorners: 5.8, awayCorners: 4.1,
+                            homeCards: 2.5, awayCards: 2.9,
+                            homePossession: 53, awayPossession: 47,
+                            homeForm: ['W', 'D', 'L', 'W', 'D'],
+                            awayForm: ['L', 'W', 'L', 'D', 'D'],
+                            h2h: { homeWins: 3, draws: 1, awayWins: 1 },
+                            suggestion: "Amostra de 10 jogos reafirma favoritismo do Coritiba jogando em casa."
+                        },
+                        5: {
+                            probHome: 55, probDraw: 25, probAway: 20, probBtts: 45, probOver25: 45,
+                            homeXG: 1.70, awayXG: 0.90,
+                            homeCorners: 6.8, awayCorners: 3.9,
+                            homeCards: 2.2, awayCards: 3.1,
+                            homePossession: 57, awayPossession: 43,
+                            homeForm: ['W', 'W', 'D', 'W', 'W'],
+                            awayForm: ['L', 'L', 'D', 'W', 'L'],
+                            h2h: { homeWins: 3, draws: 1, awayWins: 1 },
+                            suggestion: "Forma recente do América-MG fora de casa é bastante fraca (3 derrotas nos últimos 5). Coritiba Handcap Asiático -0.5."
+                        }
+                    }
+                }
+            ],
+            br_a: [
+                {
+                    id: 'br_a_1',
+                    home: 'Botafogo',
+                    homeCode: 'BOT',
+                    homeRank: '1º Lugar • 68 pts',
+                    away: 'Palmeiras',
+                    awayCode: 'PAL',
+                    awayRank: '2º Lugar • 65 pts',
+                    time: '20:00',
+                    stats: {
+                        season: {
+                            probHome: 42, probDraw: 30, probAway: 28, probBtts: 58, probOver25: 52,
+                            homeXG: 1.75, awayXG: 1.60,
+                            homeCorners: 6.2, awayCorners: 5.8,
+                            homeCards: 2.6, awayCards: 2.7,
+                            homePossession: 52, awayPossession: 48,
+                            homeForm: ['W', 'W', 'D', 'W', 'W'],
+                            awayForm: ['W', 'W', 'W', 'D', 'W'],
+                            h2h: { homeWins: 2, draws: 2, awayWins: 1 },
+                            suggestion: "Decisão do campeonato! Duas equipes altamente qualificadas ofensivamente. Ambas Marcam SIM tem valor alto."
+                        },
+                        10: {
+                            probHome: 40, probDraw: 32, probAway: 28, probBtts: 62, probOver25: 55,
+                            homeXG: 1.70, awayXG: 1.62,
+                            homeCorners: 6.0, awayCorners: 6.0,
+                            homeCards: 2.8, awayCards: 2.9,
+                            homePossession: 51, awayPossession: 49,
+                            homeForm: ['W', 'D', 'W', 'W', 'D'],
+                            awayForm: ['W', 'W', 'D', 'W', 'W'],
+                            h2h: { homeWins: 2, draws: 2, awayWins: 1 },
+                            suggestion: "Amostra de 10 jogos aponta alta taxa de escanteios totais (Média 12.0). Linha de Over 10.5 Escanteios."
+                        },
+                        5: {
+                            probHome: 45, probDraw: 28, probAway: 27, probBtts: 65, probOver25: 58,
+                            homeXG: 1.90, awayXG: 1.70,
+                            homeCorners: 6.8, awayCorners: 6.2,
+                            homeCards: 3.0, awayCards: 3.1,
+                            homePossession: 53, awayPossession: 47,
+                            homeForm: ['W', 'W', 'W', 'W', 'D'],
+                            awayForm: ['W', 'W', 'W', 'W', 'D'],
+                            h2h: { homeWins: 2, draws: 2, awayWins: 1 },
+                            suggestion: "Ataques em fase espetacular nos últimos 5 jogos. Sugestão: Over 2.5 Gols + Ambas Marcam."
+                        }
+                    }
+                }
+            ],
+            epl: [
+                {
+                    id: 'epl_1',
+                    home: 'Arsenal',
+                    homeCode: 'ARS',
+                    homeRank: '2º Lugar • 60 pts',
+                    away: 'Chelsea',
+                    awayCode: 'CHE',
+                    awayRank: '5º Lugar • 48 pts',
+                    time: '16:30',
+                    stats: {
+                        season: {
+                            probHome: 55, probDraw: 25, probAway: 20, probBtts: 52, probOver25: 54,
+                            homeXG: 1.95, awayXG: 1.25,
+                            homeCorners: 7.1, awayCorners: 4.8,
+                            homeCards: 1.9, awayCards: 2.9,
+                            homePossession: 60, awayPossession: 40,
+                            homeForm: ['W', 'W', 'L', 'W', 'W'],
+                            awayForm: ['D', 'W', 'L', 'D', 'W'],
+                            h2h: { homeWins: 3, draws: 1, awayWins: 1 },
+                            suggestion: "Arsenal com fortíssimo aproveitamento no Emirates. Vitória do Arsenal ML com sustentação em xG (1.95)."
+                        },
+                        10: {
+                            probHome: 52, probDraw: 26, probAway: 22, probBtts: 55, probOver25: 56,
+                            homeXG: 1.85, awayXG: 1.30,
+                            homeCorners: 6.8, awayCorners: 5.0,
+                            homeCards: 2.0, awayCards: 3.0,
+                            homePossession: 58, awayPossession: 42,
+                            homeForm: ['W', 'L', 'W', 'W', 'D'],
+                            awayForm: ['W', 'D', 'L', 'W', 'D'],
+                            h2h: { homeWins: 3, draws: 1, awayWins: 1 },
+                            suggestion: "Arsenal mantém média alta de escanteios como mandante. Over 6.5 Cantos Arsenal."
+                        },
+                        5: {
+                            probHome: 60, probDraw: 22, probAway: 18, probBtts: 48, probOver25: 50,
+                            homeXG: 2.20, awayXG: 1.10,
+                            homeCorners: 7.8, awayCorners: 4.2,
+                            homeCards: 1.6, awayCards: 3.2,
+                            homePossession: 63, awayPossession: 37,
+                            homeForm: ['W', 'W', 'W', 'W', 'L'],
+                            awayForm: ['L', 'D', 'W', 'L', 'D'],
+                            h2h: { homeWins: 3, draws: 1, awayWins: 1 },
+                            suggestion: "Arsenal dominando ações nos primeiros tempos nos últimos 5 jogos. Vencer 1º Tempo."
+                        }
+                    }
+                }
+            ],
+            ucl: [],
+            laliga: []
+        };
+
+        // --- STATE MANAGEMENT ---
+        let currentLeague = 'br_b';
+        let currentMatchId = 'br_b_1';
+        let currentSample = 'season'; // '5', '10', 'season'
+
+        // --- HELPER FUNCTIONS ---
+        function calculateFairOdd(prob) {
+            if (!prob || prob <= 0) return 'N/A';
+            return (100 / prob).toFixed(2);
+        }
+
+        function renderFormBadges(formArray) {
+            return formArray.map(res => {
+                let colorClass = 'bg-gray-700 text-gray-300';
+                if (res === 'W') colorClass = 'bg-green-600 text-white font-bold';
+                if (res === 'D') colorClass = 'bg-yellow-600 text-white font-bold';
+                if (res === 'L') colorClass = 'bg-red-600 text-white font-bold';
+                return `<span class="w-5 h-5 rounded text-[10px] flex items-center justify-center ${colorClass}">${res}</span>`;
+            }).join('');
+        }
+
+        // --- UI UPDATE FUNCTIONS ---
+        function renderMatchesList() {
+            const matches = database[currentLeague] || [];
+            const container = document.getElementById('matchesContainer');
+            document.getElementById('matchCount').innerText = `${matches.length} jogos`;
+
+            if (matches.length === 0) {
+                container.innerHTML = `<div class="text-xs text-gray-500 text-center py-6">Nenhum jogo cadastrado para esta liga no momento.</div>`;
+                return;
+            }
+
+            container.innerHTML = matches.map(match => {
+                const isActive = match.id === currentMatchId;
+                const activeClass = isActive ? 'border-green-500 bg-gray-900/90' : 'border-custom bg-gray-900/40 hover:border-gray-600';
+                return `
+                    <div onclick="selectMatch('${match.id}')" class="p-3 rounded-lg border ${activeClass} cursor-pointer transition-all flex items-center justify-between">
+                        <div class="flex flex-col gap-1 w-full">
+                            <div class="flex items-center justify-between text-xs font-semibold text-white">
+                                <span>${match.home}</span>
+                                <span class="text-xs text-gray-400 font-normal">vs</span>
+                                <span>${match.away}</span>
+                            </div>
+                            <div class="flex items-center justify-between text-[11px] text-gray-500">
+                                <span>${match.time}</span>
+                                <span class="text-green-400 font-mono">${match.stats[currentSample].probHome}% x ${match.stats[currentSample].probAway}%</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateMatchDetails() {
+            const leagueMatches = database[currentLeague] || [];
+            let match = leagueMatches.find(m => m.id === currentMatchId);
+
+            if (!match && leagueMatches.length > 0) {
+                match = leagueMatches[0];
+                currentMatchId = match.id;
+            }
+
+            if (!match) return;
+
+            const stats = match.stats[currentSample];
+
+            // Banner Header
+            document.getElementById('homeName').innerText = match.home;
+            document.getElementById('homeLogo').innerText = match.homeCode;
+            document.getElementById('homeRank').innerText = match.homeRank;
+
+            document.getElementById('awayName').innerText = match.away;
+            document.getElementById('awayLogo').innerText = match.awayCode;
+            document.getElementById('awayRank').innerText = match.awayRank;
+
+            document.getElementById('matchTime').innerText = match.time;
+
+            // Probabilities & Fair Odds
+            document.getElementById('probHome').innerText = `${stats.probHome}%`;
+            document.getElementById('oddHome').innerText = `Odd Fair: ${calculateFairOdd(stats.probHome)}`;
+
+            document.getElementById('probDraw').innerText = `${stats.probDraw}%`;
+            document.getElementById('oddDraw').innerText = `Odd Fair: ${calculateFairOdd(stats.probDraw)}`;
+
+            document.getElementById('probAway').innerText = `${stats.probAway}%`;
+            document.getElementById('oddAway').innerText = `Odd Fair: ${calculateFairOdd(stats.probAway)}`;
+
+            document.getElementById('probBtts').innerText = `${stats.probBtts}%`;
+            document.getElementById('oddBtts').innerText = `Odd Fair: ${calculateFairOdd(stats.probBtts)}`;
+
+            document.getElementById('probOver25').innerText = `${stats.probOver25}%`;
+            document.getElementById('oddOver25').innerText = `Odd Fair: ${calculateFairOdd(stats.probOver25)}`;
+
+            // Cross Stats Metrics Bars
+            document.getElementById('homeXGVal').innerText = stats.homeXG;
+            document.getElementById('awayXGVal').innerText = stats.awayXG;
+            const totalXG = stats.homeXG + stats.awayXG;
+            document.getElementById('homeXGBar').style.width = `${(stats.homeXG / totalXG) * 100}%`;
+            document.getElementById('awayXGBar').style.width = `${(stats.awayXG / totalXG) * 100}%`;
+
+            document.getElementById('homeCornersVal').innerText = stats.homeCorners;
+            document.getElementById('awayCornersVal').innerText = stats.awayCorners;
+            const totalCorners = stats.homeCorners + stats.awayCorners;
+            document.getElementById('homeCornersBar').style.width = `${(stats.homeCorners / totalCorners) * 100}%`;
+            document.getElementById('awayCornersBar').style.width = `${(stats.awayCorners / totalCorners) * 100}%`;
+
+            document.getElementById('homeCardsVal').innerText = stats.homeCards;
+            document.getElementById('awayCardsVal').innerText = stats.awayCards;
+            const totalCards = stats.homeCards + stats.awayCards;
+            document.getElementById('homeCardsBar').style.width = `${(stats.homeCards / totalCards) * 100}%`;
+            document.getElementById('awayCardsBar').style.width = `${(stats.awayCards / totalCards) * 100}%`;
+
+            document.getElementById('homePossessionVal').innerText = `${stats.homePossession}%`;
+            document.getElementById('awayPossessionVal').innerText = `${stats.awayPossession}%`;
+            document.getElementById('homePossessionBar').style.width = `${stats.homePossession}%`;
+            document.getElementById('awayPossessionBar').style.width = `${stats.awayPossession}%`;
+
+            // Form & H2H
+            document.getElementById('homeFormBadges').innerHTML = renderFormBadges(stats.homeForm);
+            document.getElementById('awayFormBadges').innerHTML = renderFormBadges(stats.awayForm);
+
+            document.getElementById('h2hHomeWins').innerText = stats.h2h.homeWins;
+            document.getElementById('h2hDraws').innerText = stats.h2h.draws;
+            document.getElementById('h2hAwayWins').innerText = stats.h2h.awayWins;
+
+            // Update sample text label
+            let sampleText = "Base: Temporada Completa";
+            if (currentSample === '5') sampleText = "Base: Últimos 5 Jogos";
+            if (currentSample === '10') sampleText = "Base: Últimos 10 Jogos";
+            document.getElementById('sampleLabelText').innerText = sampleText;
+
+            // Clear or update script view if visible
+            generateAIScript();
+        }
+
+        function selectMatch(matchId) {
+            currentMatchId = matchId;
+            renderMatchesList();
+            updateMatchDetails();
+        }
+
+        function generateAIScript() {
+            const leagueMatches = database[currentLeague] || [];
+            const match = leagueMatches.find(m => m.id === currentMatchId);
+            if (!match) return;
+
+            const stats = match.stats[currentSample];
+            const scriptBox = document.getElementById('scriptContent');
+
+            let sampleTitle = currentSample === 'season' ? 'Temporada Completa' : `Últimos ${currentSample} Jogos`;
+
+            const text = `[ANALISE ARENA IA - PACKANALYTICS]
+Confronto: ${match.home} x ${match.away}
+Base de Dados Filtro: ${sampleTitle}
+
+1. PROBABILIDADES CALCULADAS (MODELO POISSON + XG):
+   - Vitória ${match.home}: ${stats.probHome}% (Odd Fair: ${calculateFairOdd(stats.probHome)})
+   - Empate: ${stats.probDraw}% (Odd Fair: ${calculateFairOdd(stats.probDraw)})
+   - Vitória ${match.away}: ${stats.probAway}% (Odd Fair: ${calculateFairOdd(stats.probAway)})
+
+2. MÉTRICAS CRUZADAS:
+   - xG Esperado: ${match.home} ${stats.homeXG} vs ${stats.away} ${stats.awayXG}
+   - Cantos Esperados: ${(stats.homeCorners + stats.awayCorners).toFixed(1)} totais (Casa: ${stats.homeCorners} | Fora: ${stats.awayCorners})
+   - Cartões Esperados: ${(stats.homeCards + stats.awayCards).toFixed(1)} totais
+
+3. RECOMENDAÇÃO TÁTICA DA ARENA IA:
+   ${stats.suggestion}`;
+
+            scriptBox.innerText = text;
+        }
+
+        // --- EVENT LISTENERS ---
+        document.getElementById('leagueSelect').addEventListener('change', (e) => {
+            currentLeague = e.target.value;
+            const leagueMatches = database[currentLeague] || [];
+            if (leagueMatches.length > 0) {
+                currentMatchId = leagueMatches[0].id;
+            }
+            renderMatchesList();
+            updateMatchDetails();
+        });
+
+        // Sample Filter Buttons Handling
+        document.querySelectorAll('.sample-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.sample-btn').forEach(b => {
+                    b.classList.remove('bg-green-600', 'text-white', 'shadow');
+                    b.classList.add('text-gray-400');
+                });
+
+                const target = e.currentTarget;
+                target.classList.add('bg-green-600', 'text-white', 'shadow');
+                target.classList.remove('text-gray-400');
+
+                currentSample = target.getAttribute('data-sample');
+                
+                // Trigger full re-render & recalculation
+                renderMatchesList();
+                updateMatchDetails();
+            });
+        });
+
+        document.getElementById('btnGenerateScript').addEventListener('click', () => {
+            generateAIScript();
+            document.getElementById('scriptSection').scrollIntoView({ behavior: 'smooth' });
+        });
+
+        document.getElementById('btnCopyScript').addEventListener('click', () => {
+            const textToCopy = document.getElementById('scriptContent').innerText;
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const btn = document.getElementById('btnCopyScript');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = `<i class="fa-solid fa-check text-green-400"></i> Copiado!`;
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                }, 2000);
+            });
+        });
+
+        // --- INITIALIZATION ---
+        renderMatchesList();
+        updateMatchDetails();
+    </script>
+</body>
+</html>
